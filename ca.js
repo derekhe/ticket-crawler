@@ -5,7 +5,7 @@ var moment = require('moment');
 var hotCites = require('./hotcity.json');
 var _ = require('lodash');
 
-var threads = 40;
+var threads = 80;
 var q = async.queue(function (data, callback) {
     var depCode = data.depCode;
     var arrCode = data.arrCode;
@@ -38,13 +38,22 @@ var q = async.queue(function (data, callback) {
     console.log(data);
 
     request(options, function (error, response, body) {
-        callback();
         if (error) {
+            callback(false);
             console.log(error);
             return;
         }
 
-        console.log(id, port, body.substring(1, 20));
+        var s = body.substring(1, 50);
+
+        var valid = body.indexOf("needverify") == -1;
+        if (valid) {
+            console.log(id, port, s);
+        } else {
+            console.error(id, port, s);
+        }
+
+        callback(valid);
     });
 }, threads);
 
@@ -52,12 +61,13 @@ q.drain = function () {
     console.log('all items have been processed');
 };
 
-var codes = _.map(hotCites, function (city) {
+var codes = _.shuffle(_.map(hotCites, function (city) {
     return city.code;
-});
+}));
 
 var id = 0;
 var finished = 0;
+var error = 0;
 var startTime = moment();
 _.each(codes, function (depCode) {
     _.each(codes, function (arrCode) {
@@ -66,10 +76,15 @@ _.each(codes, function (depCode) {
         for (var day = 0; day <= 30; day++) {
             id++;
             var date = moment().add(day, 'days').format("YYYYMMDD");
-            q.push({"id": id, "depCode": depCode, "arrCode": arrCode, "date": date}, function () {
-                finished++;
+            q.push({"id": id, "depCode": depCode, "arrCode": arrCode, "date": date}, function (valid) {
+                if (valid) {
+                    finished++;
+                }
+                else {
+                    error++;
+                }
                 var duration = moment.duration(moment() - startTime).as("minutes");
-                console.log(`finished: ${finished}, ${finished / duration}`);
+                console.log(`finished: ${finished}, error: ${error}, speed: ${finished / duration}`);
             });
         }
     })
