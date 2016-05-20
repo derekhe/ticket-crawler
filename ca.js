@@ -75,6 +75,8 @@ _.each(codes, function (depCode) {
         for (var day = 0; day <= 30; day++) {
             id++;
             var date = moment().add(day, 'days').format("YYYYMMDD");
+            var startDelay = Math.random() * 1000;
+            setTimeout(function(){
             q.push({"id": id, "depCode": depCode, "arrCode": arrCode, "date": date}, function (valid) {
                 if (valid) {
                     finished++;
@@ -85,6 +87,7 @@ _.each(codes, function (depCode) {
                 var duration = moment.duration(moment() - startTime).as("minutes");
                 console.log(`finished: ${finished}, error: ${error}, speed: ${finished / duration}`);
             });
+            }, startDelay);
         }
     })
 });
