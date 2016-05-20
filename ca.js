@@ -11,6 +11,7 @@ var q = async.queue(function (data, callback) {
     var arrCode = data.arrCode;
     var date = data.date;
 
+    var port = (id % threads);
     var options = {
         method: 'POST',
         url: 'http://b2c.csair.com/B2C40/query/jaxb/direct/query.ao',
@@ -29,7 +30,7 @@ var q = async.queue(function (data, callback) {
         agentClass: Agent,
         agentOptions: {
             socksHost: "107.170.8.79",
-            socksPort: 2000 + (id % threads)
+            socksPort: 2000 + port
         }
     };
 
@@ -42,7 +43,7 @@ var q = async.queue(function (data, callback) {
             return;
         }
 
-        console.log(id, body.substring(1, 20));
+        console.log(id, port, body.substring(1, 20));
     });
 }, threads);
 
