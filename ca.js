@@ -5,7 +5,7 @@ var moment = require('moment');
 var hotCites = require('./hotcity.json');
 var _ = require('lodash');
 
-var threads = 80;
+var threads = 50;
 var q = async.queue(function (data, callback) {
     var depCode = data.depCode;
     var arrCode = data.arrCode;
@@ -17,7 +17,6 @@ var q = async.queue(function (data, callback) {
         method: 'POST',
         url: 'http://b2c.csair.com/B2C40/query/jaxb/direct/query.ao',
         headers: {
-            'postman-token': 'd66078de-9f4e-ddc1-2ddd-7c2e9af7ff09',
             'cache-control': 'no-cache',
             'accept-language': 'en-US,en;q=0.8,zh-CN;q=0.6,zh;q=0.4,zh-TW;q=0.2',
             'content-type': 'application/x-www-form-urlencoded',
@@ -30,7 +29,7 @@ var q = async.queue(function (data, callback) {
         },
         agentClass: Agent,
         agentOptions: {
-            socksHost: "107.170.8.79",
+            socksHost: "128.199.64.154",
             socksPort: 2000 + port
         }
     };
