@@ -5,6 +5,7 @@ var moment = require('moment');
 var hotCites = require('./hotcity.json');
 var _ = require('lodash');
 
+var threads = 40;
 var q = async.queue(function (data, callback) {
     var depCode = data.depCode;
     var arrCode = data.arrCode;
@@ -28,7 +29,7 @@ var q = async.queue(function (data, callback) {
         agentClass: Agent,
         agentOptions: {
             socksHost: "107.170.8.79",
-            socksPort: 2000 + (id % 30)
+            socksPort: 2000 + (id % threads)
         }
     };
 
@@ -38,11 +39,12 @@ var q = async.queue(function (data, callback) {
         callback();
         if (error) {
             console.log(error);
+            return;
         }
 
-        console.log(id, body);
+        console.log(id, body.substring(1, 20));
     });
-}, 30);
+}, threads);
 
 q.drain = function () {
     console.log('all items have been processed');
