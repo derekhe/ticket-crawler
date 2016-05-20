@@ -9,9 +9,30 @@ var path = require('path');
 var zlib = require('zlib');
 
 var threads = 50;
+
+var invalidAirlines = [];
+var queueCallback = function (valid) {
+    if (valid) {
+        finished++;
+    }
+    else {
+        error++;
+    }
+    var duration = moment.duration(moment() - startTime).as("minutes");
+    console.log(`finished: ${finished}, error: ${error}, speed: ${finished / duration}`);
+};
+
 var q = async.queue(function (data, callback) {
     var depCode = data.depCode;
     var arrCode = data.arrCode;
+
+    var airlineKey = `${depCode}-${arrCode}`;
+    if(_.indexOf(invalidAirlines, airlineKey)!=-1){
+        console.log(`${airlineKey} , skip`);
+        callback(false);
+        return;
+    }
+
     var date = data.date;
     var id = data.id;
 
@@ -43,11 +64,13 @@ var q = async.queue(function (data, callback) {
         var valid = false;
         try {
             if (error) {
-                console.log(error);
+                console.error(error);
+                q.push(data, queueCallback);
+                callback(false);
                 return;
             }
 
-            var s = body.substring(1, 50);
+            var s = body.substring(0, 200);
 
             valid = body.indexOf("airports") != -1;
             if (valid) {
@@ -60,12 +83,18 @@ var q = async.queue(function (data, callback) {
                     fs.writeFileSync(fileName, result);
                 });
             }
-            else {
-                console.error(id, port, s);
+            else if (body.indexOf("很抱歉，暂无此航线") != -1) {
+                invalidAirlines.push(airlineKey);
+            } else {
+                console.error("Retry", id, port, s);
+                q.push(data, queueCallback);
             }
-        }
-        finally {
+
             callback(valid);
+        }
+        catch (err) {
+            q.push(data, queueCallback);
+            callback(false);
         }
     });
 }, threads);
@@ -89,16 +118,7 @@ _.each(codes, function (depCode) {
         for (var day = 0; day <= 30; day++) {
             id++;
             var date = moment().add(day, 'days').format("YYYYMMDD");
-            q.push({"id": id, "depCode": depCode, "arrCode": arrCode, "date": date}, function (valid) {
-                if (valid) {
-                    finished++;
-                }
-                else {
-                    error++;
-                }
-                var duration = moment.duration(moment() - startTime).as("minutes");
-                console.log(`finished: ${finished}, error: ${error}, speed: ${finished / duration}`);
-            });
+            q.push({"id": id, "depCode": depCode, "arrCode": arrCode, "date": date}, queueCallback);
         }
     })
 });
