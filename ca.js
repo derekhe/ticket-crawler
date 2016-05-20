@@ -36,24 +36,28 @@ var q = async.queue(function (data, callback) {
 
     console.log(data);
 
-    request(options, function (error, response, body) {
-        if (error) {
-            callback(false);
-            console.log(error);
-            return;
-        }
+    var startDelay = Math.random() * 1000;
+    setTimeout(function () {
 
-        var s = body.substring(1, 50);
+        request(options, function (error, response, body) {
+            if (error) {
+                callback(false);
+                console.log(error);
+                return;
+            }
 
-        var valid = body.indexOf("airports") != -1;
-        if (valid) {
-            console.log(id, port, s);
-        } else {
-            console.error(id, port, s);
-        }
+            var s = body.substring(1, 50);
 
-        callback(valid);
-    });
+            var valid = body.indexOf("airports") != -1;
+            if (valid) {
+                console.log(id, port, s);
+            } else {
+                console.error(id, port, s);
+            }
+
+            callback(valid);
+        })
+    }, startDelay);
 }, threads);
 
 q.drain = function () {
@@ -75,8 +79,6 @@ _.each(codes, function (depCode) {
         for (var day = 0; day <= 30; day++) {
             id++;
             var date = moment().add(day, 'days').format("YYYYMMDD");
-            var startDelay = Math.random() * 1000;
-            setTimeout(function(){
             q.push({"id": id, "depCode": depCode, "arrCode": arrCode, "date": date}, function (valid) {
                 if (valid) {
                     finished++;
@@ -87,7 +89,6 @@ _.each(codes, function (depCode) {
                 var duration = moment.duration(moment() - startTime).as("minutes");
                 console.log(`finished: ${finished}, error: ${error}, speed: ${finished / duration}`);
             });
-            }, startDelay);
         }
     })
 });
