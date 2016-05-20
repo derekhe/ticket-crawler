@@ -45,7 +45,7 @@ var q = async.queue(function (data, callback) {
 
         var s = body.substring(1, 50);
 
-        var valid = body.indexOf("needverify") == -1;
+        var valid = body.indexOf("airports") != -1;
         if (valid) {
             console.log(id, port, s);
         } else {
