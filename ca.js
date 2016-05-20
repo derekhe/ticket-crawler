@@ -10,6 +10,7 @@ var q = async.queue(function (data, callback) {
     var depCode = data.depCode;
     var arrCode = data.arrCode;
     var date = data.date;
+    var id = data.id;
 
     var port = (id % threads);
     var options = {
