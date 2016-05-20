@@ -4,6 +4,9 @@ var Agent = require('socks5-http-client/lib/Agent');
 var moment = require('moment');
 var hotCites = require('./hotcity.json');
 var _ = require('lodash');
+var fs = require('fs-extra');
+var path = require('path');
+var zlib = require('zlib');
 
 var threads = 50;
 var q = async.queue(function (data, callback) {
@@ -36,28 +39,35 @@ var q = async.queue(function (data, callback) {
 
     console.log(data);
 
-    var startDelay = Math.random() * 1000;
-    setTimeout(function () {
-
-        request(options, function (error, response, body) {
+    request(options, function (error, response, body) {
+        var valid = false;
+        try {
             if (error) {
-                callback(false);
                 console.log(error);
                 return;
             }
 
             var s = body.substring(1, 50);
 
-            var valid = body.indexOf("airports") != -1;
+            valid = body.indexOf("airports") != -1;
             if (valid) {
                 console.log(id, port, s);
-            } else {
+
+                var dirName = `./out/${moment().format("YYYY-MM-DD")}`;
+                fs.ensureDirSync(dirName);
+                var fileName = path.join(dirName, `${moment().format("x")}.json.gz`);
+                zlib.gzip(JSON.stringify(JSON.parse(body), null, 2), function (err, result) {
+                    fs.writeFileSync(fileName, result);
+                });
+            }
+            else {
                 console.error(id, port, s);
             }
-
+        }
+        finally {
             callback(valid);
-        })
-    }, startDelay);
+        }
+    });
 }, threads);
 
 q.drain = function () {
