@@ -27,7 +27,7 @@ var q = async.queue(function (data, callback) {
     var arrCode = data.arrCode;
 
     var airlineKey = `${depCode}-${arrCode}`;
-    if(_.indexOf(invalidAirlines, airlineKey)!=-1){
+    if (_.indexOf(invalidAirlines, airlineKey) != -1) {
         console.log(`${airlineKey} , skip`);
         callback(false);
         return;
@@ -85,6 +85,9 @@ var q = async.queue(function (data, callback) {
             }
             else if (body.indexOf("很抱歉，暂无此航线") != -1) {
                 invalidAirlines.push(airlineKey);
+            } else if (body.indexOf("message") != -1) {
+                console.error("Skip", id, port, s);
+                valid = false;
             } else {
                 console.error("Retry", id, port, s);
                 q.push(data, queueCallback);
