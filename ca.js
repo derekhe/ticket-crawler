@@ -3,12 +3,14 @@ var async = require('async');
 var Agent = require('socks5-http-client/lib/Agent');
 var moment = require('moment');
 var hotCites = require('./hotcity.json');
+var proxies = require("./proxy.json");
 var _ = require('lodash');
 var fs = require('fs-extra');
 var path = require('path');
 var zlib = require('zlib');
-
 var threads = 50;
+
+proxies = _.filter(proxies, (item)=>{return item.types["HTTP"] == "High";})
 
 var invalidAirlines = [];
 var queueCallback = function (valid) {
@@ -19,7 +21,7 @@ var queueCallback = function (valid) {
         error++;
     }
     var duration = moment.duration(moment() - startTime).as("minutes");
-    console.log(`finished: ${finished}, error: ${error}, speed: ${finished / duration}`);
+    console.log(`finished: ${finished}, error: ${error}, speed: ${finished / duration}, proxies: ${proxies.length}`);
 };
 
 var q = async.queue(function (data, callback) {
@@ -36,7 +38,10 @@ var q = async.queue(function (data, callback) {
     var date = data.date;
     var id = data.id;
 
-    var port = (id % threads);
+    var proxyIndex = id % proxies.length;
+    var proxy = proxies[proxyIndex];
+
+    var httpProxy = `http://${proxy.host}:${proxy.port}`;
     var options = {
         method: 'POST',
         url: 'http://b2c.csair.com/B2C40/query/jaxb/direct/query.ao',
@@ -46,16 +51,12 @@ var q = async.queue(function (data, callback) {
             'content-type': 'application/x-www-form-urlencoded',
             'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.94 Safari/537.36',
             origin: 'http://b2c.csair.com',
-            accept: 'application/json, text/javascript, */*; q=0.01'
+            accept: 'application/json, text/javascript, */*; q=0.01',
         },
         form: {
             "json": `{"depcity":"${depCode}", "arrcity":"${arrCode}", "flightdate":"${date}", "adultnum":"1", "childnum":"0", "infantnum":"0", "cabinorder":"0", "airline":"1", "flytype":"0", "international":"0", "action":"0", "segtype":"1", "cache":"0", "preUrl":"", "isMember":""}`
         },
-        agentClass: Agent,
-        agentOptions: {
-            socksHost: "128.199.64.154",
-            socksPort: 2000 + port
-        }
+        proxy: httpProxy
     };
 
     console.log(data);
@@ -74,7 +75,7 @@ var q = async.queue(function (data, callback) {
 
             valid = body.indexOf("airports") != -1;
             if (valid) {
-                console.log(id, port, s);
+                console.log(id, httpProxy, s);
 
                 var dirName = `./out/${moment().format("YYYY-MM-DD")}`;
                 fs.ensureDirSync(dirName);
@@ -86,16 +87,21 @@ var q = async.queue(function (data, callback) {
             else if (body.indexOf("很抱歉，暂无此航线") != -1) {
                 invalidAirlines.push(airlineKey);
             } else if (body.indexOf("message") != -1) {
-                console.error("Skip", id, port, s);
+                console.error("Skip", id, httpProxy, s);
                 valid = false;
+            } else if ((body.indexOf("403 Forbidden") != -1) || (body.indexOf("needverify") != -1)){
+                _.pullAt(proxies, proxyIndex);
+                console.log("Num of proxies: " + proxies.length);
             } else {
-                console.error("Retry", id, port, s);
+                console.error("Retry", id, httpProxy, s);
                 q.push(data, queueCallback);
             }
 
             callback(valid);
         }
         catch (err) {
+            _.pullAt(proxies, proxyIndex);
+            console.log("ERROR:" , err, httpProxy);
             q.push(data, queueCallback);
             callback(false);
         }
@@ -118,7 +124,7 @@ _.each(codes, function (depCode) {
     _.each(codes, function (arrCode) {
         if (depCode === arrCode) return;
 
-        for (var day = 0; day <= 30; day++) {
+        for (var day = 2; day <= 30; day++) {
             id++;
             var date = moment().add(day, 'days').format("YYYYMMDD");
             q.push({"id": id, "depCode": depCode, "arrCode": arrCode, "date": date}, queueCallback);
