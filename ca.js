@@ -38,7 +38,13 @@ var q = async.queue(function (data, callback) {
     var date = data.date;
     var id = data.id;
 
-    var proxyIndex = id % proxies.length;
+    var proxyCount = proxies.length;
+
+    if(proxyCount < q.concurrency){
+        q.concurrency = proxyCount;
+    }
+
+    var proxyIndex = id % proxyCount;
     var proxy = proxies[proxyIndex];
 
     var httpProxy = `http://${proxy.host}:${proxy.port}`;
@@ -91,7 +97,7 @@ var q = async.queue(function (data, callback) {
                 valid = false;
             } else if ((body.indexOf("403 Forbidden") != -1) || (body.indexOf("needverify") != -1)){
                 _.pullAt(proxies, proxyIndex);
-                console.log("Num of proxies: " + proxies.length);
+                console.log(body);
             } else {
                 console.error("Retry", id, httpProxy, s);
                 q.push(data, queueCallback);
