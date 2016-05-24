@@ -26,6 +26,8 @@ var queueCallback = function (valid) {
     console.log(`finished: ${finished}, error: ${error}, time: ${duration}, speed: ${finished / duration}, proxies: ${proxies.length}`);
 };
 
+var id = 0;
+
 var q = async.queue(function (data, callback) {
     var depCode = data.depCode;
     var arrCode = data.arrCode;
@@ -38,7 +40,7 @@ var q = async.queue(function (data, callback) {
     }
 
     var date = data.date;
-    var id = data.id;
+    id++;
 
     var proxyCount = proxies.length;
 
@@ -67,7 +69,7 @@ var q = async.queue(function (data, callback) {
         proxy: httpProxy
     };
 
-    console.log(data);
+    console.log(id, data);
 
     request(options, function (error, response, body) {
         var valid = false;
@@ -142,9 +144,8 @@ _.each(codes, function (depCode) {
         if (depCode === arrCode) return;
 
         for (var day = 2; day <= 30; day++) {
-            id++;
             var date = moment().add(day, 'days').format("YYYYMMDD");
-            q.push({"id": id, "depCode": depCode, "arrCode": arrCode, "date": date}, queueCallback);
+            q.push({"depCode": depCode, "arrCode": arrCode, "date": date}, queueCallback);
         }
     })
 });
