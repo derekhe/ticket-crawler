@@ -10,7 +10,7 @@ var path = require('path');
 var zlib = require('zlib');
 var threads = 50;
 
-proxies = _.filter(proxies, (item)=>{return item.types["HTTP"] == "High";})
+// proxies = _.filter(proxies, (item)=>{return item.types["HTTP"] == "High";})
 
 var invalidAirlines = [];
 var queueCallback = function (valid) {
@@ -21,7 +21,7 @@ var queueCallback = function (valid) {
         error++;
     }
     var duration = moment.duration(moment() - startTime).as("minutes");
-    console.log(`finished: ${finished}, error: ${error}, speed: ${finished / duration}, proxies: ${proxies.length}`);
+    console.log(`finished: ${finished}, error: ${error}, time: ${duration}, speed: ${finished / duration}, proxies: ${proxies.length}`);
 };
 
 var q = async.queue(function (data, callback) {
