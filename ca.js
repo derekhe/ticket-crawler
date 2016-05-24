@@ -75,6 +75,7 @@ var q = async.queue(function (data, callback) {
             if (error) {
                 console.error(error);
                 q.push(data, queueCallback);
+                _.pullAt(proxies, proxyIndex);
                 callback(false);
                 return;
             }
@@ -102,6 +103,7 @@ var q = async.queue(function (data, callback) {
                 console.log(body);
             } else {
                 console.error("Retry", id, httpProxy, s);
+                _.pullAt(proxies, proxyIndex);
                 q.push(data, queueCallback);
             }
 
