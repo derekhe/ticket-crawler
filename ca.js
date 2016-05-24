@@ -12,8 +12,6 @@ var threads = 50;
 
 // proxies = _.filter(proxies, (item)=>{return item.types["HTTP"] == "High";})
 
-var failedProxy = {};
-
 var invalidAirlines = [];
 var queueCallback = function (valid) {
     if (valid) {
@@ -44,7 +42,7 @@ var q = async.queue(function (data, callback) {
 
     var proxyCount = proxies.length;
 
-    if (proxyCount < q.concurrency) {
+    if(proxyCount < q.concurrency){
         q.concurrency = proxyCount;
     }
 
@@ -99,7 +97,7 @@ var q = async.queue(function (data, callback) {
             } else if (body.indexOf("message") != -1) {
                 console.error("Skip", id, httpProxy, s);
                 valid = false;
-            } else if ((body.indexOf("403 Forbidden") != -1) || (body.indexOf("needverify") != -1)) {
+            } else if ((body.indexOf("403 Forbidden") != -1) || (body.indexOf("needverify") != -1)){
                 _.pullAt(proxies, proxyIndex);
                 console.log(body);
             } else {
@@ -110,17 +108,8 @@ var q = async.queue(function (data, callback) {
             callback(valid);
         }
         catch (err) {
-            if (failedProxy[httpProxy] > 5) {
-                _.pullAt(proxies, proxyIndex);
-            }
-            else if (failedProxy[httpProxy] == undefined) {
-                failedProxy[httpProxy] = 0;
-            }
-            else {
-                failedProxy[httpProxy]++;
-            }
-
-            console.log("ERROR:", err, httpProxy);
+            _.pullAt(proxies, proxyIndex);
+            console.log("ERROR:" , err, httpProxy);
             q.push(data, queueCallback);
             callback(false);
         }
