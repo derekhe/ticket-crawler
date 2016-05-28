@@ -10,7 +10,9 @@ var path = require('path');
 var zlib = require('zlib');
 var threads = 50;
 
-// proxies = _.filter(proxies, (item)=>{return item.types["HTTP"] == "High";})
+proxies = _.filter(proxies, (item)=> {
+    return item.types["HTTP"] == "High";
+});
 
 var invalidAirlines = [];
 var queueCallback = function (valid) {
@@ -25,6 +27,7 @@ var queueCallback = function (valid) {
 };
 
 var id = 0;
+var proxyNeedVerify = {};
 
 var q = async.queue(function (data, callback) {
     var depCode = data.depCode;
@@ -42,7 +45,7 @@ var q = async.queue(function (data, callback) {
 
     var proxyCount = proxies.length;
 
-    if(proxyCount < q.concurrency){
+    if (proxyCount < q.concurrency) {
         q.concurrency = proxyCount;
     }
 
@@ -59,7 +62,7 @@ var q = async.queue(function (data, callback) {
             'content-type': 'application/x-www-form-urlencoded',
             'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.94 Safari/537.36',
             origin: 'http://b2c.csair.com',
-            accept: 'application/json, text/javascript, */*; q=0.01',
+            accept: 'application/json, text/javascript, */*; q=0.01'
         },
         form: {
             "json": `{"depcity":"${depCode}", "arrcity":"${arrCode}", "flightdate":"${date}", "adultnum":"1", "childnum":"0", "infantnum":"0", "cabinorder":"0", "airline":"1", "flytype":"0", "international":"0", "action":"0", "segtype":"1", "cache":"0", "preUrl":"", "isMember":""}`
@@ -98,9 +101,17 @@ var q = async.queue(function (data, callback) {
             } else if (body.indexOf("message") != -1) {
                 console.error("Skip", id, httpProxy, s);
                 valid = false;
-            } else if ((body.indexOf("403 Forbidden") != -1) || (body.indexOf("needverify") != -1)){
+            } else if ((body.indexOf("403 Forbidden") != -1)) {
                 _.pullAt(proxies, proxyIndex);
                 console.log(body);
+            }
+            else if (body.indexOf("needverify") != -1) {
+                if (proxyNeedVerify[httpProxy] == undefined) {
+                    proxyNeedVerify[httpProxy] = 1;
+                }
+                proxyNeedVerify[httpProxy]++;
+                console.log(proxyNeedVerify[httpProxy]);
+                q.push(data, queueCallback);
             } else {
                 console.error("Retry", id, httpProxy, s);
                 _.pullAt(proxies, proxyIndex);
@@ -111,7 +122,7 @@ var q = async.queue(function (data, callback) {
         }
         catch (err) {
             _.pullAt(proxies, proxyIndex);
-            console.log("ERROR:" , err, httpProxy);
+            console.log("ERROR:", err, httpProxy);
             q.push(data, queueCallback);
             callback(false);
         }
@@ -126,7 +137,6 @@ var codes = _.shuffle(_.map(hotCites, function (city) {
     return city.code;
 }));
 
-var id = 0;
 var finished = 0;
 var error = 0;
 var startTime = moment();
