@@ -110,7 +110,7 @@ var q = async.queue(function (data, callback) {
                     proxyNeedVerify[httpProxy] = 1;
                 }
                 proxyNeedVerify[httpProxy]++;
-                console.log(proxyNeedVerify[httpProxy]);
+                console.log("need verify", httpProxy, proxyNeedVerify[httpProxy]);
                 q.push(data, queueCallback);
             } else {
                 console.error("Retry", id, httpProxy, body);
