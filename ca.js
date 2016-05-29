@@ -113,7 +113,7 @@ var q = async.queue(function (data, callback) {
                 console.log(proxyNeedVerify[httpProxy]);
                 q.push(data, queueCallback);
             } else {
-                console.error("Retry", id, httpProxy, s);
+                console.error("Retry", id, httpProxy, body);
                 _.pullAt(proxies, proxyIndex);
                 q.push(data, queueCallback);
             }
